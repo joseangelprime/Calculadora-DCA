@@ -183,12 +183,6 @@
       color: #111;
     }
 
-    .btn-secondary {
-      background: rgba(0,0,0,.35);
-      color: var(--text);
-      border: 1px solid rgba(255,255,255,.12);
-    }
-
     .status {
       font-size: .98rem;
       color: var(--muted);
@@ -342,7 +336,7 @@
         <div class="chart-wrap">
           <canvas id="chart"></canvas>
         </div>
-        <div class="footnote">La gráfica compara el total invertido vs el valor actual acumulado de tu posición, usando histórico diario real de BTC cargado automáticamente desde CoinGecko.</div>
+        <div class="footnote">La gráfica compara el total invertido vs el valor actual acumulado de tu posición, usando histórico diario real de BTC cargado automáticamente.</div>
       </section>
     </div>
   </div>
@@ -428,32 +422,29 @@
       try {
         setStatus('Cargando histórico real...', '');
 
-        const [historyRes, tickerRes] = await Promise.all([
-          fetch('https://api.blockchain.info/charts/market-price?timespan=all&sampled=false&format=json'),
-          fetch('https://blockchain.info/ticker?cors=true')
-        ]);
+        const marketRes = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=max&interval=daily');
+        if (!marketRes.ok) throw new Error('No se pudo consultar el histórico');
 
-        if (!historyRes.ok) throw new Error('No se pudo consultar el histórico');
-        if (!tickerRes.ok) throw new Error('No se pudo consultar el precio actual');
+        const marketData = await marketRes.json();
 
-        const historyData = await historyRes.json();
-        const tickerData = await tickerRes.json();
-
-        if (!historyData || !Array.isArray(historyData.values) || !historyData.values.length) {
+        if (!marketData || !Array.isArray(marketData.prices) || !marketData.prices.length) {
           throw new Error('Histórico vacío');
         }
 
-        priceRows = historyData.values.map(item => {
-          const date = new Date(item.x * 1000);
+        priceRows = marketData.prices.map(item => {
+          const date = new Date(item[0]);
           const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-          return [formatted, Number(item.y)];
+          return [formatted, Number(item[1])];
         }).filter(row => row[0] && Number.isFinite(row[1]) && row[1] > 0);
 
-        priceRows.sort((a, b) => a[0].localeCompare(b[0]));
+        const uniqueMap = new Map();
+        for (const row of priceRows) uniqueMap.set(row[0], row[1]);
+
+        priceRows = Array.from(uniqueMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
         priceMap = new Map(priceRows);
         sortedDates = priceRows.map(row => row[0]);
 
-        currentBtcPrice = Number(tickerData?.USD?.last) || priceRows[priceRows.length - 1][1];
+        currentBtcPrice = priceRows[priceRows.length - 1][1];
         btcNowTextEl.textContent = currency(currentBtcPrice, 0);
 
         const today = new Date();
@@ -477,7 +468,7 @@
       } catch (error) {
         console.error(error);
         btcNowTextEl.textContent = 'Error';
-        setStatus('No se pudo cargar el histórico real dentro de Elementor. La solución estable es usar este HTML como archivo externo y mostrarlo con iframe.', 'bad');
+        setStatus('No se pudo cargar el histórico real. Revisa la conexión o intenta nuevamente en unos segundos.', 'bad');
       }
     }
 
