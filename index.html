@@ -422,7 +422,7 @@
       try {
         setStatus('Cargando histórico real...', '');
 
-        const marketRes = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily');
+        const marketRes = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=max&interval=daily');
         if (!marketRes.ok) throw new Error('No se pudo consultar el histórico');
 
         const marketData = await marketRes.json();
