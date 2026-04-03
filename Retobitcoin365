@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora DCA - Reto Bitcoin 365</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pragati+Narrow:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --orange: #FF801F;
+      --bg: #050505;
+      --panel: #0000005E;
+      --border: rgba(255,255,255,.10);
+      --text: #F5F5F5;
+      --muted: #C7C7C7;
+      --green: #2ECC71;
+      --red: #FF5C5C;
+      --radius: 24px;
+      --shadow: 0 16px 38px rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, #030303 0%, #0a0a0a 100%);
+      color: var(--text);
+      font-family: 'Pragati Narrow', sans-serif;
+    }
+
+    body {
+      padding: 24px;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .app {
+      background: rgba(0,0,0,.22);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      color: var(--orange);
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 10px 0 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.45;
+    }
+
+    .pill {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 12px 16px;
+      font-size: 1rem;
+      color: var(--muted);
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
+    }
+
+    .pill strong {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .panel,
+    .chart-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .panel h2,
+    .chart-panel h2 {
+      margin: 0 0 16px;
+      color: var(--orange);
+      font-size: 1.55rem;
+      line-height: 1.1;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .field input {
+      width: 100%;
+      height: 52px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.35);
+      color: var(--text);
+      padding: 0 16px;
+      font-family: 'Pragati Narrow', sans-serif;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: rgba(255,128,31,.9);
+      box-shadow: 0 0 0 3px rgba(255,128,31,.18);
+    }
+
+    .hint {
+      margin-top: 6px;
+      color: #A8A8A8;
+      font-size: .92rem;
+      line-height: 1.4;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 20px;
+      font-family: 'Pragati Narrow', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .18s ease, opacity .18s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      opacity: .96;
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: #111;
+    }
+
+    .btn-secondary {
+      background: rgba(0,0,0,.35);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+
+    .status {
+      font-size: .98rem;
+      color: var(--muted);
+    }
+
+    .status.ok { color: var(--green); }
+    .status.bad { color: var(--red); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 16px;
+    }
+
+    .stat {
+      background: rgba(0,0,0,.26);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 22px;
+      padding: 18px;
+      min-height: 132px;
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .stat .value {
+      color: var(--orange);
+      font-size: clamp(1.7rem, 3vw, 2.3rem);
+      line-height: 1.02;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      word-break: break-word;
+    }
+
+    .stat .value.green { color: var(--green); }
+
+    .stat .sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .stat .sub.green { color: var(--green); }
+    .stat .sub.red { color: var(--red); }
+
+    .chart-panel {
+      margin-top: 22px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      min-height: 380px;
+      width: 100%;
+    }
+
+    .footnote {
+      margin-top: 14px;
+      color: #A8A8A8;
+      font-size: .94rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 920px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body { padding: 12px; }
+      .app, .panel, .chart-panel { padding: 18px; }
+      .form-grid, .stats { grid-template-columns: 1fr; }
+      .chart-wrap { min-height: 300px; }
+      .pill { width: 100%; white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="app">
+      <div class="topbar">
+        <div class="hero">
+          <h1>Calculadora DCA - Reto Bitcoin 365</h1>
+          <p>Calcula cuánto has ahorrado, o cuánto habrías ahorrado desde la fecha que comenzaste a ahorrar.</p>
+        </div>
+        <div class="pill">BTC hoy: <strong id="btcNowText">Cargando...</strong></div>
+      </div>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Parámetros</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="startDate">Fecha inicial</label>
+              <input id="startDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="endDate">Fecha final</label>
+              <input id="endDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="amountUsd">Monto por compra (USD)</label>
+              <input id="amountUsd" type="number" min="1" step="1" value="10" />
+            </div>
+            <div class="field">
+              <label for="daysEvery">Frecuencia (días)</label>
+              <input id="daysEvery" type="number" min="1" step="1" value="1" />
+              <div class="hint">1 = diario, 7 = semanal, 14 = quincenal, 30 = mensual aproximado.</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="calcBtn">Calcular</button>
+            <span class="status" id="statusText">Cargando histórico real...</span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Resultados</h2>
+          <div class="stats">
+            <div class="stat">
+              <div class="label">BTC (Acumulado)</div>
+              <div class="value" id="btcAccumulated">0 BTC</div>
+              <div class="sub" id="buyCount">0 compras</div>
+            </div>
+            <div class="stat">
+              <div class="label">Precio Promedio Compra</div>
+              <div class="value" id="avgBuyPrice">US$0</div>
+              <div class="sub">USD/BTC</div>
+            </div>
+            <div class="stat">
+              <div class="label">Total Invertido</div>
+              <div class="value" id="totalInvested">US$0</div>
+              <div class="sub">Capital aportado</div>
+            </div>
+            <div class="stat">
+              <div class="label">Valor Actual</div>
+              <div class="value green" id="currentValue">US$0</div>
+              <div class="sub green" id="roiText">ROI: 0%</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="chart-panel">
+        <h2>Evolución</h2>
+        <div class="chart-wrap">
+          <canvas id="chart"></canvas>
+        </div>
+        <div class="footnote">La gráfica compara el total invertido vs el valor actual acumulado de tu posición, usando histórico diario real de BTC cargado automáticamente desde CoinGecko.</div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const startDateEl = document.getElementById('startDate');
+    const endDateEl = document.getElementById('endDate');
+    const amountUsdEl = document.getElementById('amountUsd');
+    const daysEveryEl = document.getElementById('daysEvery');
+    const btcNowTextEl = document.getElementById('btcNowText');
+    const statusTextEl = document.getElementById('statusText');
+
+    const btcAccumulatedEl = document.getElementById('btcAccumulated');
+    const buyCountEl = document.getElementById('buyCount');
+    const avgBuyPriceEl = document.getElementById('avgBuyPrice');
+    const totalInvestedEl = document.getElementById('totalInvested');
+    const currentValueEl = document.getElementById('currentValue');
+    const roiTextEl = document.getElementById('roiText');
+
+    let chart;
+    let priceRows = [];
+    let priceMap = new Map();
+    let sortedDates = [];
+    let currentBtcPrice = 0;
+
+    function formatDateInput(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function currency(value, digits = 0) {
+      return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: digits,
+        minimumFractionDigits: digits,
+      }).format(value);
+    }
+
+    function number(value, digits = 6) {
+      return new Intl.NumberFormat('es-CO', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      }).format(value);
+    }
+
+    function setStatus(text, type = '') {
+      statusTextEl.textContent = text;
+      statusTextEl.className = `status ${type}`.trim();
+    }
+
+    function dateKey(date) {
+      return formatDateInput(date);
+    }
+
+    function addDays(date, days) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + days);
+      return d;
+    }
+
+    function getNearestAvailableDate(dateStr) {
+      if (priceMap.has(dateStr)) return dateStr;
+      if (!sortedDates.length) return null;
+      if (dateStr <= sortedDates[0]) return sortedDates[0];
+      if (dateStr >= sortedDates[sortedDates.length - 1]) return sortedDates[sortedDates.length - 1];
+
+      let left = 0;
+      let right = sortedDates.length - 1;
+      while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        const midValue = sortedDates[mid];
+        if (midValue === dateStr) return midValue;
+        if (midValue < dateStr) left = mid + 1;
+        else right = mid - 1;
+      }
+      return sortedDates[right] || sortedDates[left] || null;
+    }
+
+    async function loadHistoricalData() {
+      try {
+        setStatus('Cargando histórico real...', '');
+
+        const [historyRes, tickerRes] = await Promise.all([
+          fetch('https://api.blockchain.info/charts/market-price?timespan=all&sampled=false&format=json'),
+          fetch('https://blockchain.info/ticker?cors=true')
+        ]);
+
+        if (!historyRes.ok) throw new Error('No se pudo consultar el histórico');
+        if (!tickerRes.ok) throw new Error('No se pudo consultar el precio actual');
+
+        const historyData = await historyRes.json();
+        const tickerData = await tickerRes.json();
+
+        if (!historyData || !Array.isArray(historyData.values) || !historyData.values.length) {
+          throw new Error('Histórico vacío');
+        }
+
+        priceRows = historyData.values.map(item => {
+          const date = new Date(item.x * 1000);
+          const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          return [formatted, Number(item.y)];
+        }).filter(row => row[0] && Number.isFinite(row[1]) && row[1] > 0);
+
+        priceRows.sort((a, b) => a[0].localeCompare(b[0]));
+        priceMap = new Map(priceRows);
+        sortedDates = priceRows.map(row => row[0]);
+
+        currentBtcPrice = Number(tickerData?.USD?.last) || priceRows[priceRows.length - 1][1];
+        btcNowTextEl.textContent = currency(currentBtcPrice, 0);
+
+        const today = new Date();
+        const todayStr = formatDateInput(today);
+        const maxHistoricalDate = sortedDates[sortedDates.length - 1];
+        const effectiveEnd = todayStr <= maxHistoricalDate ? todayStr : maxHistoricalDate;
+        const endDateObj = new Date(effectiveEnd + 'T00:00:00');
+        const startDateObj = new Date(endDateObj);
+        startDateObj.setFullYear(startDateObj.getFullYear() - 4);
+
+        const minHistoricalDate = sortedDates[0];
+        startDateEl.value = formatDateInput(startDateObj) < minHistoricalDate ? minHistoricalDate : formatDateInput(startDateObj);
+        endDateEl.value = effectiveEnd;
+        endDateEl.max = effectiveEnd;
+        startDateEl.max = effectiveEnd;
+        startDateEl.min = minHistoricalDate;
+        endDateEl.min = minHistoricalDate;
+
+        setStatus(`Histórico cargado: ${priceRows.length} días`, 'ok');
+        calculate();
+      } catch (error) {
+        console.error(error);
+        btcNowTextEl.textContent = 'Error';
+        setStatus('No se pudo cargar el histórico real dentro de Elementor. La solución estable es usar este HTML como archivo externo y mostrarlo con iframe.', 'bad');
+      }
+    }
+
+    function calculate() {
+      if (!sortedDates.length) return;
+
+      const startRaw = startDateEl.value;
+      const endRaw = endDateEl.value;
+      const amountUsd = parseFloat(amountUsdEl.value);
+      const everyDays = parseInt(daysEveryEl.value, 10);
+
+      if (!startRaw || !endRaw || !Number.isFinite(amountUsd) || amountUsd <= 0 || !Number.isFinite(everyDays) || everyDays < 1) {
+        setStatus('Revisa los datos ingresados.', 'bad');
+        return;
+      }
+
+      const minDate = sortedDates[0];
+      const maxDate = sortedDates[sortedDates.length - 1];
+
+      if (startRaw < minDate || endRaw > maxDate) {
+        setStatus(`El histórico disponible va de ${minDate} a ${maxDate}.`, 'bad');
+        return;
+      }
+
+      const start = new Date(startRaw + 'T00:00:00');
+      const end = new Date(endRaw + 'T00:00:00');
+
+      if (end < start) {
+        setStatus('La fecha final debe ser posterior a la fecha inicial.', 'bad');
+        return;
+      }
+
+      const buyEvents = [];
+      for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, everyDays)) {
+        const requestedDate = dateKey(cursor);
+        const actualDate = getNearestAvailableDate(requestedDate);
+        const price = actualDate ? priceMap.get(actualDate) : null;
+        if (!price) continue;
+        buyEvents.push({
+          requestedDate,
+          actualDate,
+          price,
+          usd: amountUsd,
+          btc: amountUsd / price,
+        });
+      }
+
+      if (!buyEvents.length) {
+        setStatus('No se generaron compras con esos parámetros.', 'bad');
+        return;
+      }
+
+      let btcAccumulated = 0;
+      let invested = 0;
+      const labels = [];
+      const investedSeries = [];
+      const valueSeries = [];
+
+      for (const event of buyEvents) {
+        btcAccumulated += event.btc;
+        invested += event.usd;
+        labels.push(event.actualDate);
+        investedSeries.push(Number(invested.toFixed(2)));
+        valueSeries.push(Number((btcAccumulated * currentBtcPrice).toFixed(2)));
+      }
+
+      const avgPrice = invested / btcAccumulated;
+      const currentValue = btcAccumulated * currentBtcPrice;
+      const roi = ((currentValue - invested) / invested) * 100;
+
+      btcAccumulatedEl.textContent = `${number(btcAccumulated, 6)} BTC`;
+      buyCountEl.textContent = `${buyEvents.length} compras`;
+      avgBuyPriceEl.textContent = currency(avgPrice, 0);
+      totalInvestedEl.textContent = currency(invested, 0);
+      currentValueEl.textContent = currency(currentValue, 0);
+      roiTextEl.textContent = `ROI: ${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%`;
+      roiTextEl.className = `sub ${roi >= 0 ? 'green' : 'red'}`;
+
+      setStatus('Cálculo actualizado con histórico real.', 'ok');
+      renderChart(labels, investedSeries, valueSeries);
+    }
+
+    function renderChart(labels, investedSeries, valueSeries) {
+      const ctx = document.getElementById('chart').getContext('2d');
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Total invertido',
+              data: investedSeries,
+              borderColor: '#FF801F',
+              backgroundColor: 'rgba(255,128,31,.14)',
+              fill: true,
+              pointRadius: 0,
+              tension: 0.25,
+              borderWidth: 2
+            },
+            {
+              label: 'Valor actual acumulado',
+              data: valueSeries,
+              borderColor: '#2ECC71',
+              backgroundColor: 'rgba(46,204,113,.12)',
+              fill: true,
+              pointRadius: 0,
+              tension: 0.25,
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#EAEAEA',
+                font: {
+                  family: 'Pragati Narrow',
+                  size: 15
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${currency(context.raw, 0)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#BDBDBD',
+                maxTicksLimit: 8,
+                font: { family: 'Pragati Narrow', size: 13 }
+              },
+              grid: { color: 'rgba(255,255,255,.05)' }
+            },
+            y: {
+              ticks: {
+                color: '#BDBDBD',
+                font: { family: 'Pragati Narrow', size: 13 },
+                callback: function(value) {
+                  return currency(value, 0);
+                }
+              },
+              grid: { color: 'rgba(255,255,255,.06)' }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', calculate);
+    [startDateEl, endDateEl, amountUsdEl, daysEveryEl].forEach(el => {
+      el.addEventListener('change', calculate);
+      el.addEventListener('input', calculate);
+    });
+
+    loadHistoricalData();
+  </script>
+</body>
+</html>
